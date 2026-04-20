@@ -5,25 +5,30 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function Chauffeurs() {
   const { user }                = useAuth();
+  const hasTransportEntity      = Boolean(user?.entity_id);
   const [chauffeurs, setChauffeurs] = useState([]);
+  const [societes, setSocietes] = useState([]);
   const [modal, setModal]       = useState(false);
   const [editing, setEditing]   = useState(null);
-  const [form, setForm]         = useState({ nom: '', prenom: '', cin: '', telephone: '', disponible: true });
+  const [form, setForm]         = useState({ nom: '', prenom: '', cin: '', email: '', password: '', telephone: '', disponible: true, societe_transport_id: '' });
   const [error, setError]       = useState('');
 
   const load = () => api.get('/chauffeurs').then(r => setChauffeurs(r.data));
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    api.get('/societes-transport').then(r => setSocietes(r.data)).catch(() => setSocietes([]));
+  }, []);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ nom: '', prenom: '', cin: '', telephone: '', disponible: true });
+    setForm({ nom: '', prenom: '', cin: '', email: '', password: '', telephone: '', disponible: true, societe_transport_id: societes[0]?.id || '' });
     setError('');
     setModal(true);
   };
 
   const openEdit = (c) => {
     setEditing(c.id);
-    setForm({ nom: c.nom, prenom: c.prenom, cin: c.cin, telephone: c.telephone ?? '', disponible: c.disponible });
+    setForm({ nom: c.nom, prenom: c.prenom, cin: c.cin, email: c.email ?? '', password: '', telephone: c.telephone ?? '', disponible: c.disponible, societe_transport_id: '' });
     setError('');
     setModal(true);
   };
@@ -32,7 +37,8 @@ export default function Chauffeurs() {
     e.preventDefault();
     setError('');
     try {
-      const payload = { ...form, societe_transport_id: user.entity_id };
+      const payload = { ...form, societe_transport_id: hasTransportEntity ? undefined : (form.societe_transport_id || undefined) };
+      if (!payload.password) delete payload.password;
       if (editing) {
         await api.put(`/chauffeurs/${editing}`, payload);
       } else {
@@ -55,6 +61,12 @@ export default function Chauffeurs() {
     <Layout>
       <h1 className="page-title">Chauffeurs</h1>
 
+      {!hasTransportEntity && (
+        <div className="alert alert-warning">
+          Votre compte transport n'est pas encore rattache a une societe de transport. Selectionnez votre societe lors du premier ajout de chauffeur.
+        </div>
+      )}
+
       <div className="actions-bar">
         <span>{chauffeurs.length} chauffeur(s)</span>
         <button className="btn btn-primary" onClick={openCreate}>+ Ajouter un chauffeur</button>
@@ -63,13 +75,14 @@ export default function Chauffeurs() {
       <div className="card table-wrapper">
         <table className="data-table">
           <thead>
-            <tr><th>Nom complet</th><th>CIN</th><th>Telephone</th><th>Disponible</th><th>Actions</th></tr>
+            <tr><th>Nom complet</th><th>CIN</th><th>Email</th><th>Telephone</th><th>Disponible</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {chauffeurs.map(c => (
               <tr key={c.id}>
                 <td><strong>{c.prenom} {c.nom}</strong></td>
                 <td>{c.cin}</td>
+                <td>{c.email ?? '—'}</td>
                 <td>{c.telephone ?? '—'}</td>
                 <td>
                   {c.disponible
@@ -83,7 +96,7 @@ export default function Chauffeurs() {
               </tr>
             ))}
             {chauffeurs.length === 0 && (
-              <tr><td colSpan={5} style={{ textAlign: 'center', color: '#999' }}>Aucun chauffeur</td></tr>
+              <tr><td colSpan={6} style={{ textAlign: 'center', color: '#999' }}>Aucun chauffeur</td></tr>
             )}
           </tbody>
         </table>
@@ -95,6 +108,15 @@ export default function Chauffeurs() {
             <div className="modal-title">{editing ? 'Modifier le chauffeur' : 'Nouveau chauffeur'}</div>
             {error && <div className="alert alert-danger">{error}</div>}
             <form onSubmit={save}>
+              {!hasTransportEntity && (
+                <div className="form-group">
+                  <label>Societe transport *</label>
+                  <select className="form-control" value={form.societe_transport_id} onChange={e => setForm({ ...form, societe_transport_id: e.target.value })} required>
+                    <option value="">-- Selectionner --</option>
+                    {societes.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="form-row">
                 <div className="form-group">
                   <label>Prenom *</label>
@@ -108,6 +130,14 @@ export default function Chauffeurs() {
               <div className="form-group">
                 <label>CIN *</label>
                 <input className="form-control" value={form.cin} onChange={e => setForm({ ...form, cin: e.target.value })} required />
+              </div>
+              <div className="form-group">
+                <label>Email</label>
+                <input type="email" className="form-control" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} placeholder="exemple@email.com" />
+              </div>
+              <div className="form-group">
+                <label>Mot de passe {editing && '(laisser vide pour conserver)'}</label>
+                <input type="password" className="form-control" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} placeholder={editing ? 'Nouveau mot de passe' : 'Mot de passe chauffeur'} required={!editing} />
               </div>
               <div className="form-group">
                 <label>Telephone</label>

@@ -17,7 +17,7 @@ export default function AdminDashboard() {
 
   return (
     <Layout>
-      <h1 className="page-title">Tableau de bord</h1>
+      <h1 className="page-title">Dashboard</h1>
 
       <div className="stats-grid">
         <div className="stat-card" style={{ color: '#1e3a5f' }}>

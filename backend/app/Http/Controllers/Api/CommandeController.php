@@ -19,15 +19,21 @@ class CommandeController extends Controller
         $user  = $request->user();
         $query = Commande::with(['centreElevage.societeElevage', 'produit', 'societeAliment', 'livraison']);
 
-        if ($user->hasRole('centre') && $user->entity_id) {
-            // Le responsable centre ne voit que les commandes de son centre
-            $query->where('centre_elevage_id', $user->entity_id);
-        } elseif ($user->hasRole('usine') && $user->entity_id) {
-            // L'usine voit les commandes qui lui sont assignées (ou non assignées)
-            $query->where(function ($q) use ($user) {
-                $q->where('societe_aliment_id', $user->entity_id)
-                  ->orWhereNull('societe_aliment_id');
-            });
+        if ($user->hasRole('centre')) {
+            // Le responsable centre ne voit que les commandes de son centre.
+            // Si le compte n'est pas rattaché, on renvoie une liste vide pour éviter toute fuite.
+            if (!$user->entity_id) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where('centre_elevage_id', $user->entity_id);
+            }
+        } elseif ($user->hasRole('usine')) {
+            // L'usine voit strictement les commandes de sa société aliment.
+            if (!$user->entity_id) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where('societe_aliment_id', $user->entity_id);
+            }
         }
 
         return response()->json($query->orderByDesc('created_at')->get());
@@ -41,11 +47,17 @@ class CommandeController extends Controller
     {
         $user = $request->user();
 
+        if ($user->hasRole('centre') && !$user->entity_id) {
+            return response()->json([
+                'message' => 'Votre compte centre n\'est pas encore rattaché à un centre d\'élevage. Contactez l\'administrateur.',
+            ], 422);
+        }
+
         $data = $request->validate([
             'produit_id'         => 'required|exists:produits,id',
             'quantite'           => 'required|integer|min:1',
             'unite'              => 'sometimes|string',
-            'societe_aliment_id' => 'nullable|exists:societes_aliment,id',
+            'societe_aliment_id' => 'required|exists:societes_aliment,id',
             'notes'              => 'nullable|string',
         ]);
 
@@ -113,6 +125,10 @@ class CommandeController extends Controller
     public function annuler(Request $request, Commande $commande)
     {
         $user = $request->user();
+
+        if ($user->hasRole('centre') && !$user->entity_id) {
+            return response()->json(['message' => 'Compte centre non rattaché. Contactez l\'administrateur.'], 422);
+        }
 
         // Vérifier que le centre est propriétaire de cette commande
         if ($user->hasRole('centre') && $commande->centre_elevage_id !== $user->entity_id) {

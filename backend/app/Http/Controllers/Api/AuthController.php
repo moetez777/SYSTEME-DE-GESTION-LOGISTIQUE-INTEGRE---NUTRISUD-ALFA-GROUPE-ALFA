@@ -14,6 +14,15 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    private function resolveRoleLabel(User $user): string
+    {
+        if ($user->role && $user->role->name === 'transport') {
+            return 'Societe Transport';
+        }
+
+        return $user->role?->label ?? '';
+    }
+
     /**
      * POST /api/login
      */
@@ -172,7 +181,7 @@ class AuthController extends Controller
                 'name'        => $user->name,
                 'email'       => $user->email,
                 'role'        => $user->role->name,
-                'role_label'  => $user->role->label,
+                'role_label'  => $this->resolveRoleLabel($user),
                 'entity_id'   => $user->entity_id,
                 'entity_type' => $user->entity_type,
             ],
@@ -201,7 +210,7 @@ class AuthController extends Controller
             'name'        => $user->name,
             'email'       => $user->email,
             'role'        => $user->role->name,
-            'role_label'  => $user->role->label,
+            'role_label'  => $this->resolveRoleLabel($user),
             'entity_id'   => $user->entity_id,
             'entity_type' => $user->entity_type,
         ]);

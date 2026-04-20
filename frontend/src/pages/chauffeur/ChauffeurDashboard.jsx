@@ -11,10 +11,16 @@ export default function ChauffeurDashboard() {
   useEffect(() => { load(); }, []);
 
   const updateStatut = async (id, statut) => {
+    const confirmationMessage = statut === 'en_cours'
+      ? 'Valider le depart de cette livraison ?'
+      : 'Valider la livraison comme terminee ?';
+
+    if (!window.confirm(confirmationMessage)) return;
+
     setLoading(prev => ({ ...prev, [id]: true }));
     try {
       await api.put(`/livraisons/${id}/status`, { statut });
-      setSuccess('Statut mis a jour avec succes.');
+      setSuccess(statut === 'en_cours' ? 'Depart valide avec succes.' : 'Livraison validee avec succes.');
       load();
     } catch (err) {
       alert(err.response?.data?.message || 'Erreur.');
@@ -52,7 +58,7 @@ export default function ChauffeurDashboard() {
                       disabled={loading[l.id]}
                       onClick={() => updateStatut(l.id, 'en_cours')}
                     >
-                      Demarrer
+                      Valider depart
                     </button>
                   )}
                   {l.statut === 'en_cours' && (
@@ -61,7 +67,7 @@ export default function ChauffeurDashboard() {
                       disabled={loading[l.id]}
                       onClick={() => updateStatut(l.id, 'livree')}
                     >
-                      Marquer livree
+                      Valider livraison
                     </button>
                   )}
                 </td>

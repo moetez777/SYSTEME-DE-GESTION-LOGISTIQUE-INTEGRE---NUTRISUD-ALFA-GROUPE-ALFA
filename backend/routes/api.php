@@ -30,7 +30,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::apiResource('roles', RoleController::class)->except(['show']);
 
         // Entités
-        Route::get('/societes-aliment',     [EntiteController::class, 'societeAlimentIndex']);
         Route::post('/societes-aliment',    [EntiteController::class, 'societeAlimentStore']);
         Route::put('/societes-aliment/{societeAliment}', [EntiteController::class, 'societeAlimentUpdate']);
 
@@ -40,15 +39,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/centres-elevage',      [EntiteController::class, 'centreIndex']);
         Route::post('/centres-elevage',     [EntiteController::class, 'centreStore']);
 
-        Route::get('/societes-transport',   [EntiteController::class, 'societeTransportIndex']);
         Route::post('/societes-transport',  [EntiteController::class, 'societeTransportStore']);
 
         // Rapport
         Route::get('/reports/export',       [DashboardController::class, 'export']);
     });
 
+    // ── Societes Aliment (lecture admin + usine + centre) ──────
+    Route::middleware(['role:admin,usine,centre'])->group(function () {
+        Route::get('/societes-aliment', [EntiteController::class, 'societeAlimentIndex']);
+    });
+
     // ── Dashboard (Admin + tous les rôles connectés) ─────────────
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    // ── Societes Transport (lecture admin + transport) ───────────
+    Route::middleware(['role:admin,transport'])->group(function () {
+        Route::get('/societes-transport',   [EntiteController::class, 'societeTransportIndex']);
+    });
 
     // ── Produits (usine + admin) ─────────────────────────────────
     Route::get('/produits',         [ProduitController::class, 'index']);
@@ -99,7 +107,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // ── Camions ──────────────────────────────────────────────────
     Route::get('/camions',         [CamionController::class, 'index']);
-    Route::middleware(['role:admin,transport'])->group(function () {
+    Route::middleware(['role:transport'])->group(function () {
         Route::post('/camions',             [CamionController::class, 'store']);
         Route::put('/camions/{camion}',     [CamionController::class, 'update']);
         Route::delete('/camions/{camion}',  [CamionController::class, 'destroy']);
@@ -107,7 +115,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // ── Chauffeurs ───────────────────────────────────────────────
     Route::get('/chauffeurs',      [ChauffeurController::class, 'index']);
-    Route::middleware(['role:admin,transport'])->group(function () {
+    Route::middleware(['role:transport'])->group(function () {
         Route::post('/chauffeurs',             [ChauffeurController::class, 'store']);
         Route::put('/chauffeurs/{chauffeur}',  [ChauffeurController::class, 'update']);
         Route::delete('/chauffeurs/{chauffeur}',[ChauffeurController::class, 'destroy']);

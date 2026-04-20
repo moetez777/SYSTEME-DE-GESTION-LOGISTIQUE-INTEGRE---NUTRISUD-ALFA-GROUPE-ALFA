@@ -5,25 +5,30 @@ import { useAuth } from '../../context/AuthContext';
 
 export default function Camions() {
   const { user }            = useAuth();
+  const hasTransportEntity  = Boolean(user?.entity_id);
   const [camions, setCamions] = useState([]);
+  const [societes, setSocietes] = useState([]);
   const [modal, setModal]   = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm]     = useState({ immatriculation: '', modele: '', capacite: '', disponible: true });
+  const [form, setForm]     = useState({ immatriculation: '', modele: '', capacite: '', disponible: true, societe_transport_id: '' });
   const [error, setError]   = useState('');
 
   const load = () => api.get('/camions').then(r => setCamions(r.data));
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    api.get('/societes-transport').then(r => setSocietes(r.data)).catch(() => setSocietes([]));
+  }, []);
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ immatriculation: '', modele: '', capacite: '', disponible: true });
+    setForm({ immatriculation: '', modele: '', capacite: '', disponible: true, societe_transport_id: societes[0]?.id || '' });
     setError('');
     setModal(true);
   };
 
   const openEdit = (c) => {
     setEditing(c.id);
-    setForm({ immatriculation: c.immatriculation, modele: c.modele, capacite: c.capacite, disponible: c.disponible });
+    setForm({ immatriculation: c.immatriculation, modele: c.modele, capacite: c.capacite, disponible: c.disponible, societe_transport_id: '' });
     setError('');
     setModal(true);
   };
@@ -35,7 +40,7 @@ export default function Camions() {
       const payload = {
         ...form,
         capacite: parseFloat(form.capacite),
-        societe_transport_id: user.entity_id,
+        societe_transport_id: hasTransportEntity ? undefined : (form.societe_transport_id || undefined),
       };
       if (editing) {
         await api.put(`/camions/${editing}`, payload);
@@ -58,6 +63,12 @@ export default function Camions() {
   return (
     <Layout>
       <h1 className="page-title">Camions</h1>
+
+      {!hasTransportEntity && (
+        <div className="alert alert-warning">
+          Votre compte transport n'est pas encore rattache a une societe de transport. Selectionnez votre societe lors du premier ajout de camion.
+        </div>
+      )}
 
       <div className="actions-bar">
         <span>{camions.length} camion(s)</span>
@@ -99,6 +110,15 @@ export default function Camions() {
             <div className="modal-title">{editing ? 'Modifier le camion' : 'Nouveau camion'}</div>
             {error && <div className="alert alert-danger">{error}</div>}
             <form onSubmit={save}>
+              {!hasTransportEntity && (
+                <div className="form-group">
+                  <label>Societe transport *</label>
+                  <select className="form-control" value={form.societe_transport_id} onChange={e => setForm({ ...form, societe_transport_id: e.target.value })} required>
+                    <option value="">-- Selectionner --</option>
+                    {societes.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="form-group">
                 <label>Immatriculation *</label>
                 <input className="form-control" value={form.immatriculation} onChange={e => setForm({ ...form, immatriculation: e.target.value })} required />

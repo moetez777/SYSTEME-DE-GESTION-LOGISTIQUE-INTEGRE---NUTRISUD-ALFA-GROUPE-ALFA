@@ -53,6 +53,11 @@ export default function Produits() {
     <Layout>
       <h1 className="page-title">Gestion des produits</h1>
 
+      <div className="alert alert-info" style={{ marginBottom: 12 }}>
+        Pour ajouter un produit: cliquez sur <strong>+ Nouveau produit</strong>, remplissez le formulaire puis validez.
+        Pour supprimer un produit: cliquez sur <strong>Desactiver</strong> dans la ligne du produit puis confirmez.
+      </div>
+
       <div className="actions-bar">
         <span>{produits.length} produit(s)</span>
         <button className="btn btn-primary" onClick={openCreate}>+ Nouveau produit</button>

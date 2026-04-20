@@ -9,7 +9,7 @@ class Chauffeur extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['societe_transport_id', 'user_id', 'nom', 'prenom', 'telephone', 'permis', 'statut'];
+    protected $fillable = ['societe_transport_id', 'user_id', 'nom', 'prenom', 'email', 'telephone', 'permis', 'statut'];
 
     public function societeTransport()
     {

@@ -19,6 +19,8 @@ import CommandesUsine  from './pages/usine/CommandesUsine';
 
 // Centre
 import CentreDashboard  from './pages/centre/CentreDashboard';
+import ProduitsCentre   from './pages/centre/ProduitsCentre';
+import PanierCentre     from './pages/centre/PanierCentre';
 import CommandesCentre  from './pages/centre/CommandesCentre';
 import StockCentre      from './pages/centre/StockCentre';
 
@@ -42,6 +44,7 @@ function App() {
 
           {/* Admin */}
           <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/produits" element={<ProtectedRoute roles={['admin']}><Produits /></ProtectedRoute>} />
           <Route path="/admin/users" element={<ProtectedRoute roles={['admin']}><Users /></ProtectedRoute>} />
           <Route path="/admin/rapports" element={<ProtectedRoute roles={['admin']}><Rapports /></ProtectedRoute>} />
           <Route path="/admin/entites" element={<ProtectedRoute roles={['admin']}><Entites /></ProtectedRoute>} />
@@ -54,6 +57,8 @@ function App() {
 
           {/* Centre */}
           <Route path="/centre" element={<ProtectedRoute roles={['centre']}><CentreDashboard /></ProtectedRoute>} />
+          <Route path="/centre/produits" element={<ProtectedRoute roles={['centre']}><ProduitsCentre /></ProtectedRoute>} />
+          <Route path="/centre/panier" element={<ProtectedRoute roles={['centre']}><PanierCentre /></ProtectedRoute>} />
           <Route path="/centre/commandes" element={<ProtectedRoute roles={['centre']}><CommandesCentre /></ProtectedRoute>} />
           <Route path="/centre/stock" element={<ProtectedRoute roles={['centre']}><StockCentre /></ProtectedRoute>} />
 
