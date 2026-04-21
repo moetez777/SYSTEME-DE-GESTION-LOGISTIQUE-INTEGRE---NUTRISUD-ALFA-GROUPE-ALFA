@@ -11,7 +11,23 @@ export function AuthProvider({ children }) {
     const stored = localStorage.getItem('user');
     const token  = localStorage.getItem('token');
     if (stored && token) {
+      // Optimistic render from cache, then sync with backend to avoid stale role/token mismatch.
       setUser(JSON.parse(stored));
+      api.get('/me')
+        .then((res) => {
+          const freshUser = res.data;
+          localStorage.setItem('user', JSON.stringify(freshUser));
+          setUser(freshUser);
+        })
+        .catch(() => {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+      return;
     }
     setLoading(false);
   }, []);

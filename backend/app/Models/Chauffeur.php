@@ -11,6 +11,8 @@ class Chauffeur extends Model
 
     protected $fillable = ['societe_transport_id', 'user_id', 'nom', 'prenom', 'email', 'telephone', 'permis', 'statut'];
 
+    protected $appends = ['disponible', 'nom_complet'];
+
     public function societeTransport()
     {
         return $this->belongsTo(SocieteTransport::class);
@@ -26,7 +28,7 @@ class Chauffeur extends Model
         return $this->hasMany(Livraison::class);
     }
 
-    public function effectuerLivraison(): bool
+    public function getDisponibleAttribute(): bool
     {
         return $this->statut === 'disponible';
     }
@@ -34,5 +36,10 @@ class Chauffeur extends Model
     public function getNomCompletAttribute(): string
     {
         return $this->prenom . ' ' . $this->nom;
+    }
+
+    public function effectuerLivraison(): bool
+    {
+        return $this->statut === 'disponible';
     }
 }

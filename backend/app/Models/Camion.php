@@ -11,6 +11,8 @@ class Camion extends Model
 
     protected $fillable = ['societe_transport_id', 'immatriculation', 'capacite', 'type', 'statut'];
 
+    protected $appends = ['disponible'];
+
     public function societeTransport()
     {
         return $this->belongsTo(SocieteTransport::class);
@@ -19,6 +21,11 @@ class Camion extends Model
     public function livraisons()
     {
         return $this->hasMany(Livraison::class);
+    }
+
+    public function getDisponibleAttribute(): bool
+    {
+        return $this->statut === 'disponible';
     }
 
     public function verifierDispo(): bool
