@@ -53,8 +53,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // ── Dashboard (Admin + tous les rôles connectés) ─────────────
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
 
-    // ── Societes Transport (lecture admin + transport) ───────────
-    Route::middleware(['role:admin,transport'])->group(function () {
+    // ── Societes Transport (lecture admin + transport + usine) ───────────
+    Route::middleware(['role:admin,transport,usine'])->group(function () {
         Route::get('/societes-transport',   [EntiteController::class, 'societeTransportIndex']);
     });
 

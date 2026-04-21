@@ -6,19 +6,53 @@ const STATUTS = ['nouvelle', 'en_cours', 'confirmee', 'refusee'];
 
 export default function CommandesUsine() {
   const [commandes, setCommandes] = useState([]);
+  const [transports, setTransports] = useState([]);
   const [filter, setFilter]       = useState('nouvelle');
   const [notes, setNotes]         = useState({});
   const [loading, setLoading]     = useState({});
   const [success, setSuccess]     = useState('');
+  const [transportModal, setTransportModal] = useState({show: false, commandeId: null});
+  const [selectedTransport, setSelectedTransport] = useState('');
 
   const load = () => api.get('/commandes').then(r => setCommandes(r.data));
-  useEffect(() => { load(); }, []);
+  
+  useEffect(() => { 
+    load();
+    // Load transport companies
+    api.get('/societes-transport', { 
+      params: { limit: 100 } 
+    }).then(r => setTransports(r.data)).catch(() => setTransports([]));
+  }, []);
 
-  const updateStatus = async (id, statut) => {
+  const openTransportModal = (commandeId) => {
+    setTransportModal({show: true, commandeId});
+    setSelectedTransport('');
+  };
+
+  const closeTransportModal = () => {
+    setTransportModal({show: false, commandeId: null});
+    setSelectedTransport('');
+  };
+
+  const confirmWithTransport = async () => {
+    if (!selectedTransport) {
+      alert('Veuillez sélectionner une société de transport.');
+      return;
+    }
+    await updateStatus(transportModal.commandeId, 'confirmee', selectedTransport);
+    closeTransportModal();
+  };
+
+  const updateStatus = async (id, statut, societeTransportId = null) => {
     setLoading(prev => ({ ...prev, [id]: true }));
     try {
-      await api.put(`/commandes/${id}/status`, { statut, notes: notes[id] || '' });
-      setSuccess('Statut mis a jour.');
+      const payload = { 
+        statut, 
+        notes: notes[id] || '',
+        societe_transport_id: societeTransportId
+      };
+      await api.put(`/commandes/${id}/status`, payload);
+      setSuccess('Statut mis à jour.');
       load();
     } catch (err) {
       alert(err.response?.data?.message || 'Erreur.');
@@ -86,7 +120,7 @@ export default function CommandesUsine() {
                       <button
                         className="btn btn-success btn-sm"
                         disabled={loading[cmd.id]}
-                        onClick={() => updateStatus(cmd.id, 'confirmee')}
+                        onClick={() => openTransportModal(cmd.id)}
                       >Confirmer</button>{' '}
                       <button
                         className="btn btn-danger btn-sm"
@@ -100,7 +134,7 @@ export default function CommandesUsine() {
                       <button
                         className="btn btn-success btn-sm"
                         disabled={loading[cmd.id]}
-                        onClick={() => updateStatus(cmd.id, 'confirmee')}
+                        onClick={() => openTransportModal(cmd.id)}
                       >Confirmer</button>{' '}
                       <button
                         className="btn btn-danger btn-sm"
@@ -121,6 +155,41 @@ export default function CommandesUsine() {
           </tbody>
         </table>
       </div>
+
+      {/* Transport Selection Modal */}
+      {transportModal.show && (
+        <div className="modal-overlay" onClick={closeTransportModal}>
+          <div className="modal-dialog" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Sélectionner Société de Transport</h2>
+              <button className="modal-close" onClick={closeTransportModal}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Société de Transport <span style={{color: 'red'}}>*</span></label>
+                <select
+                  className="form-control"
+                  value={selectedTransport}
+                  onChange={e => setSelectedTransport(e.target.value)}
+                >
+                  <option value="">-- Choisir une société --</option>
+                  {transports.map(t => (
+                    <option key={t.id} value={t.id}>{t.nom}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={closeTransportModal}>Annuler</button>
+              <button 
+                className="btn btn-success" 
+                disabled={!selectedTransport || loading[transportModal.commandeId]}
+                onClick={confirmWithTransport}
+              >Confirmer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

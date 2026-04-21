@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Commande;
+use App\Models\Livraison;
 use App\Models\StockAliment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,7 +18,7 @@ class CommandeController extends Controller
     public function index(Request $request)
     {
         $user  = $request->user();
-        $query = Commande::with(['centreElevage.societeElevage', 'produit', 'societeAliment', 'livraison']);
+        $query = Commande::with(['centreElevage.societeElevage', 'produit', 'societeAliment', 'societeTransport', 'livraison']);
 
         if ($user->hasRole('centre')) {
             // Le responsable centre ne voit que les commandes de son centre.
@@ -79,8 +80,9 @@ class CommandeController extends Controller
         $user = $request->user();
 
         $data = $request->validate([
-            'statut' => 'required|in:en_cours,confirmee,refusee',
-            'notes'  => 'nullable|string',
+            'statut'              => 'required|in:en_cours,confirmee,refusee',
+            'societe_transport_id'=> 'nullable|exists:societes_transport,id',
+            'notes'               => 'nullable|string',
         ]);
 
         // Seule l'usine peut modifier le statut
@@ -97,6 +99,11 @@ class CommandeController extends Controller
             if ($data['statut'] === Commande::STATUT_CONFIRMEE) {
                 $commande->date_confirmation = now();
 
+                // Assigner le transport company si fourni
+                if ($data['societe_transport_id'] ?? null) {
+                    $commande->societe_transport_id = $data['societe_transport_id'];
+                }
+
                 // Retirer du stock de l'usine si stock disponible
                 if ($commande->societe_aliment_id) {
                     $stock = StockAliment::where('societe_aliment_id', $commande->societe_aliment_id)
@@ -106,6 +113,17 @@ class CommandeController extends Controller
                     if ($stock) {
                         $stock->retirerStock($commande->quantite);
                     }
+                }
+                
+                // Auto-créer une livraison pour le transport si societe_transport_id est défini
+                if ($commande->societe_transport_id && !$commande->livraison()->exists()) {
+                    Livraison::create([
+                        'commande_id'          => $commande->id,
+                        'societe_transport_id' => $commande->societe_transport_id,
+                        'destination'          => $commande->centreElevage->localisation ?? 'Non spécifiée',
+                        'quantite_livree'      => $commande->quantite,
+                        'statut'               => Livraison::STATUT_PLANIFIEE,
+                    ]);
                 }
             }
 
