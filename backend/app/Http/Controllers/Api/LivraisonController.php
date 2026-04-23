@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Mail\ChauffeurAffectationMail;
 use App\Http\Controllers\Controller;
 use App\Models\Livraison;
 use App\Models\Commande;
@@ -10,6 +11,8 @@ use App\Models\Chauffeur;
 use App\Models\StockCentre;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class LivraisonController extends Controller
 {
@@ -91,7 +94,9 @@ class LivraisonController extends Controller
             'chauffeur_id'=> 'nullable|exists:chauffeurs,id',
         ]);
 
-        DB::transaction(function () use ($livraison, $data) {
+        $chauffeurAffecte = null;
+
+        DB::transaction(function () use ($livraison, $data, &$chauffeurAffecte) {
             // Libérer l'ancien camion si changement
             if (isset($data['camion_id']) && $livraison->camion_id !== $data['camion_id']) {
                 if ($livraison->camion_id) {
@@ -106,14 +111,38 @@ class LivraisonController extends Controller
                     Chauffeur::where('id', $livraison->chauffeur_id)->update(['statut' => 'disponible']);
                 }
                 Chauffeur::where('id', $data['chauffeur_id'])->update(['statut' => 'en_mission']);
+                $chauffeurAffecte = Chauffeur::with('societeTransport')->find($data['chauffeur_id']);
             }
 
             $livraison->update($data);
         });
 
+        $livraison->refresh()->load([
+            'commande.produit',
+            'commande.centreElevage.societeElevage',
+            'commande.societeAliment',
+            'camion',
+            'chauffeur',
+            'societeTransport',
+        ]);
+
+        if ($chauffeurAffecte?->email) {
+            try {
+                $siteUrl = rtrim((string) config('app.frontend_url'), '/') . '/chauffeur';
+                Mail::to($chauffeurAffecte->email)->send(new ChauffeurAffectationMail($livraison, $siteUrl));
+            } catch (\Throwable $e) {
+                Log::warning('Erreur envoi mail affectation chauffeur', [
+                    'livraison_id' => $livraison->id,
+                    'chauffeur_id'  => $chauffeurAffecte->id,
+                    'email'        => $chauffeurAffecte->email,
+                    'message'      => $e->getMessage(),
+                ]);
+            }
+        }
+
         return response()->json([
             'message'  => 'Affectation mise à jour.',
-            'livraison'=> $livraison->load(['camion', 'chauffeur']),
+            'livraison'=> $livraison,
         ]);
     }
 

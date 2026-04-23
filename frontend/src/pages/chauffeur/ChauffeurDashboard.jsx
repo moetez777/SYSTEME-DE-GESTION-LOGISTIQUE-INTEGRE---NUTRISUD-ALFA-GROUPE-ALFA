@@ -29,26 +29,54 @@ export default function ChauffeurDashboard() {
     }
   };
 
-  const planifiees  = livraisons.filter(l => l.statut === 'planifiee');
-  const en_cours    = livraisons.filter(l => l.statut === 'en_cours');
-  const terminees   = livraisons.filter(l => l.statut === 'livree');
+  const planifiees = livraisons.filter(l => l.statut === 'planifiee');
+  const enCours = livraisons.filter(l => l.statut === 'en_cours');
+  const terminees = livraisons.filter(l => l.statut === 'livree');
+
+  const formatDate = (value) => {
+    if (!value) return '—';
+    return new Date(value).toLocaleString('fr-FR');
+  };
+
+  const formatDateOnly = (value) => {
+    if (!value) return '—';
+    return new Date(value).toLocaleDateString('fr-FR');
+  };
 
   const LivTable = ({ items, showActions }) => (
     <div className="card table-wrapper">
       <table className="data-table">
         <thead>
-          <tr><th>#</th><th>Destination</th><th>Commande</th><th>Camion</th><th>Depart prevu</th><th>Depart reel</th><th>Arrivee</th><th>Statut</th>{showActions && <th>Actions</th>}</tr>
+          <tr>
+            <th>#</th>
+            <th>Commande</th>
+            <th>Produit</th>
+            <th>Quantite</th>
+            <th>Camion</th>
+            <th>Destination</th>
+            <th>Date depart</th>
+            <th>Date fin</th>
+            <th>Statut</th>
+            {showActions && <th>Actions</th>}
+          </tr>
         </thead>
         <tbody>
           {items.map(l => (
             <tr key={l.id}>
               <td>LIV-{l.id}</td>
-              <td>{l.destination}</td>
               <td>{l.commande?.reference || `CMD-${l.commande_id}`}</td>
+              <td>{l.commande?.produit?.nom || '—'}</td>
+              <td>{l.quantite_livree ?? l.commande?.quantite ?? '—'} {l.commande?.unite || l.commande?.produit?.unite || ''}</td>
               <td>{l.camion?.immatriculation ?? '—'}</td>
-              <td>{l.date_depart_prevue ? new Date(l.date_depart_prevue).toLocaleDateString('fr-FR') : '—'}</td>
-              <td>{l.depart_reel ? new Date(l.depart_reel).toLocaleString('fr-FR') : '—'}</td>
-              <td>{l.arrivee_reel ? new Date(l.arrivee_reel).toLocaleString('fr-FR') : '—'}</td>
+              <td>{l.destination}</td>
+              <td>
+                <div><strong>Prevue:</strong> {formatDateOnly(l.date_depart_prevue)}</div>
+                <div><strong>Reelle:</strong> {formatDate(l.date_depart_reel)}</div>
+              </td>
+              <td>
+                <div><strong>Prevue:</strong> {formatDateOnly(l.date_arrivee_prevue)}</div>
+                <div><strong>Reelle:</strong> {formatDate(l.date_arrivee_reel)}</div>
+              </td>
               <td><span className={`badge badge-${l.statut}`}>{l.statut}</span></td>
               {showActions && (
                 <td>
@@ -67,7 +95,7 @@ export default function ChauffeurDashboard() {
                       disabled={loading[l.id]}
                       onClick={() => updateStatut(l.id, 'livree')}
                     >
-                      Valider livraison
+                      Valider arrivee
                     </button>
                   )}
                 </td>
@@ -75,7 +103,7 @@ export default function ChauffeurDashboard() {
             </tr>
           ))}
           {items.length === 0 && (
-            <tr><td colSpan={showActions ? 9 : 8} style={{ textAlign: 'center', color: '#999' }}>Aucune livraison</td></tr>
+            <tr><td colSpan={showActions ? 10 : 9} style={{ textAlign: 'center', color: '#999' }}>Aucune livraison</td></tr>
           )}
         </tbody>
       </table>
@@ -93,7 +121,7 @@ export default function ChauffeurDashboard() {
           <div className="stat-label">Planifiees</div>
         </div>
         <div className="stat-card" style={{ borderLeftColor: '#f39c12' }}>
-          <div className="stat-value" style={{ color: '#f39c12' }}>{en_cours.length}</div>
+          <div className="stat-value" style={{ color: '#f39c12' }}>{enCours.length}</div>
           <div className="stat-label">En cours</div>
         </div>
         <div className="stat-card" style={{ borderLeftColor: '#27ae60' }}>
@@ -109,10 +137,10 @@ export default function ChauffeurDashboard() {
         </>
       )}
 
-      {en_cours.length > 0 && (
+      {enCours.length > 0 && (
         <>
           <h2 className="section-title">En cours</h2>
-          <LivTable items={en_cours} showActions={true} />
+          <LivTable items={enCours} showActions={true} />
         </>
       )}
 
